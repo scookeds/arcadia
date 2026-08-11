@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Brick Breaker — Arcadia</title>
+<style>
+  :root{--bg:#0b0f1a;--card:#131824;--grid:#1e2636;--primary:#3b82f6;--accent:#8b5cf6;--text:#f8fafc;--muted:#94a3b8}
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{background:radial-gradient(circle at 50% 0%,#131a2c,var(--bg));min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'Poppins',system-ui,sans-serif;color:var(--text);padding:16px;gap:12px;user-select:none}
+  h1{font-size:1.9rem;font-weight:800;letter-spacing:1px;background:linear-gradient(135deg,var(--primary),var(--accent));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .hud{display:flex;gap:12px;width:min(480px,92vw);justify-content:space-between;align-items:center}
+  .score{background:var(--card);border:1px solid var(--grid);border-radius:12px;padding:8px 14px;font-weight:700}
+  .score span{color:var(--muted);font-weight:500;font-size:.8rem}
+  button{background:linear-gradient(135deg,var(--primary),var(--accent));color:#fff;border:none;border-radius:12px;padding:9px 16px;font-weight:700;font-family:inherit;cursor:pointer}
+  button:active{transform:scale(.96)}
+  canvas{background:var(--card);border:1px solid var(--grid);border-radius:14px;width:min(480px,92vw);height:auto;touch-action:none}
+  .hint{color:var(--muted);font-size:.82rem}
+</style>
+</head>
+<body>
+  <h1>Brick Breaker</h1>
+  <div class="hud">
+    <div class="score">Score <span id="score">0</span></div>
+    <div class="score">Lives <span id="lives">3</span></div>
+    <button id="restart">Restart</button>
+  </div>
+  <canvas id="c" width="480" height="360"></canvas>
+  <div class="hint">Move mouse / drag · click or space to launch</div>
+<script>
+const cv=document.getElementById('c'),ctx=cv.getContext('2d');
+const PW=84,PH=12,BR=7;let paddleX,ball,bricks,score,lives,running,launched,cols=10,rows=5,bw,bh=20,pad=6,top=44;
+bw=(cv.width-pad)/cols;
+function init(){paddleX=(cv.width-PW)/2;score=0;lives=3;launched=false;reset();build();running=true;upd();requestAnimationFrame(loop);}
+function reset(){ball={x:cv.width/2,y:cv.height-40,dx:0,dy:0,sp:4.4};launched=false;}
+function build(){bricks=[];const cs=['#3b82f6','#6366f1','#8b5cf6','#a855f7','#d946ef'];for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)bricks.push({x:pad+c*bw,y:top+r*bh,w:bw-pad,h:bh-pad,c:cs[r],on:true});}
+function launch(){if(!launched){launched=true;ball.dy=-ball.sp;ball.dx=(Math.random()*2-1)*3;}}
+function loop(){if(!running)return;const b=ball;if(launched){b.x+=b.dx;b.y+=b.dy;if(b.x<BR||b.x>cv.width-BR)b.dx*=-1;if(b.y<BR)b.dy*=-1;if(b.y>cv.height){lives--;upd();if(lives<=0){running=false;banner('Game Over');}else reset();}
+  if(b.y+BR>cv.height-24&&b.y+BR<cv.height-8&&b.x>paddleX&&b.x<paddleX+PW){b.dy=-Math.abs(b.dy);const hit=(b.x-(paddleX+PW/2))/(PW/2);b.dx=hit*5;}
+  bricks.forEach(k=>{if(k.on&&b.x>k.x&&b.x<k.x+k.w&&b.y-BR<k.y+k.h&&b.y+BR>k.y){k.on=false;b.dy*=-1;score+=10;upd();}});
+  if(bricks.every(k=>!k.on)){running=false;banner('You Win!');}}
+  else{b.x=paddleX+PW/2;}
+  draw();requestAnimationFrame(loop);}
+function draw(){ctx.clearRect(0,0,cv.width,cv.height);bricks.forEach(k=>{if(!k.on)return;ctx.fillStyle=k.c;ctx.shadowColor=k.c;ctx.shadowBlur=8;ctx.beginPath();ctx.roundRect(k.x,k.y,k.w,k.h,4);ctx.fill();});ctx.shadowBlur=0;ctx.fillStyle='#60a5fa';ctx.beginPath();ctx.roundRect(paddleX,cv.height-24,PW,PH,6);ctx.fill();ctx.fillStyle='#f8fafc';ctx.shadowColor='#8b5cf6';ctx.shadowBlur=14;ctx.beginPath();ctx.arc(ball.x,ball.y,BR,0,7);ctx.fill();ctx.shadowBlur=0;}
+function banner(t){ctx.fillStyle='rgba(11,15,26,.82)';ctx.fillRect(0,0,cv.width,cv.height);ctx.fillStyle='#f8fafc';ctx.font='700 30px Poppins,sans-serif';ctx.textAlign='center';ctx.fillText(t,cv.width/2,cv.height/2);ctx.font='15px Poppins,sans-serif';ctx.fillStyle='#94a3b8';ctx.fillText('Score: '+score,cv.width/2,cv.height/2+28);}
+function upd(){document.getElementById('score').textContent=score;document.getElementById('lives').textContent=lives;}
+function moveTo(cx){const rect=cv.getBoundingClientRect();let x=(cx-rect.left)*(cv.width/rect.width)-PW/2;paddleX=Math.max(0,Math.min(cv.width-PW,x));}
+cv.addEventListener('mousemove',e=>moveTo(e.clientX));
+cv.addEventListener('touchmove',e=>{moveTo(e.touches[0].clientX);e.preventDefault();},{passive:false});
+cv.addEventListener('click',launch);cv.addEventListener('touchstart',launch,{passive:true});
+addEventListener('keydown',e=>{if(e.key===' '){e.preventDefault();launch();}});
+document.getElementById('restart').onclick=init;
+if(!CanvasRenderingContext2D.prototype.roundRect){CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h,r){this.moveTo(x+r,y);this.arcTo(x+w,y,x+w,y+h,r);this.arcTo(x+w,y+h,x,y+h,r);this.arcTo(x,y+h,x,y,r);this.arcTo(x,y,x+w,y,r);return this;};}
+init();
+</script>
+</body>
+</html>

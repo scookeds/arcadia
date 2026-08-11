@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>2048 — Arcadia</title>
+<style>
+  :root{--bg:#0b0f1a;--card:#131824;--grid:#1e2636;--empty:#232c3d;--primary:#3b82f6;--accent:#8b5cf6;--text:#f8fafc;--muted:#94a3b8}
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{background:radial-gradient(circle at 50% 0%,#131a2c,var(--bg));min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'Poppins',system-ui,sans-serif;color:var(--text);padding:16px;gap:16px;user-select:none}
+  h1{font-size:2.2rem;font-weight:800;letter-spacing:1px;background:linear-gradient(135deg,var(--primary),var(--accent));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .top{display:flex;gap:12px;align-items:center;width:min(420px,92vw);justify-content:space-between}
+  .scores{display:flex;gap:10px}
+  .score{background:var(--card);border:1px solid var(--grid);border-radius:12px;padding:8px 16px;text-align:center;min-width:84px}
+  .score .lbl{font-size:.65rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted)}
+  .score .val{font-size:1.3rem;font-weight:700}
+  button{background:linear-gradient(135deg,var(--primary),var(--accent));color:#fff;border:none;border-radius:12px;padding:10px 18px;font-weight:700;font-family:inherit;cursor:pointer;font-size:.95rem}
+  button:active{transform:scale(.96)}
+  #board{position:relative;width:min(420px,92vw);aspect-ratio:1;background:var(--grid);border-radius:16px;padding:12px}
+  .cells{position:absolute;inset:12px;display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(4,1fr);gap:12px}
+  .cell{background:var(--empty);border-radius:10px}
+  .tiles{position:absolute;inset:12px}
+  .tile{position:absolute;width:calc((100% - 36px)/4);height:calc((100% - 36px)/4);border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.8rem;transition:transform .12s ease;background:var(--primary)}
+  .tile.pop{animation:pop .16s ease}
+  @keyframes pop{0%{transform:scale(.6)}100%{transform:scale(1)}}
+  .msg{position:absolute;inset:12px;border-radius:12px;background:rgba(11,15,26,.86);display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:5}
+  .msg.show{display:flex}
+  .msg h2{font-size:2rem}
+  .hint{color:var(--muted);font-size:.85rem;text-align:center}
+</style>
+</head>
+<body>
+  <h1>2048</h1>
+  <div class="top">
+    <div class="scores">
+      <div class="score"><div class="lbl">Score</div><div class="val" id="score">0</div></div>
+      <div class="score"><div class="lbl">Best</div><div class="val" id="best">0</div></div>
+    </div>
+    <button id="newGame">New Game</button>
+  </div>
+  <div id="board">
+    <div class="cells" id="cells"></div>
+    <div class="tiles" id="tiles"></div>
+    <div class="msg" id="msg"><h2 id="msgText">Game Over</h2><button id="retry">Try Again</button></div>
+  </div>
+  <div class="hint">Arrow keys / WASD or swipe to move</div>
+<script>
+const SIZE=4;const colors={2:'#2b3550',4:'#334066',8:'#3b82f6',16:'#4f74e6',32:'#6366f1',64:'#7c5cf0',128:'#8b5cf6',256:'#a855f7',512:'#c026d3',1024:'#db2777',2048:'#f59e0b'};
+let grid,score,best=+(localStorage.getItem('arc2048best')||0);
+const tilesEl=document.getElementById('tiles'),scoreEl=document.getElementById('score'),bestEl=document.getElementById('best');
+const cellsEl=document.getElementById('cells');for(let i=0;i<16;i++){const c=document.createElement('div');c.className='cell';cellsEl.appendChild(c);}
+bestEl.textContent=best;
+function init(){grid=Array.from({length:SIZE},()=>Array(SIZE).fill(0));score=0;add();add();render();document.getElementById('msg').classList.remove('show');}
+function add(){const e=[];grid.forEach((r,y)=>r.forEach((v,x)=>{if(!v)e.push([y,x])}));if(!e.length)return;const[y,x]=e[Math.floor(Math.random()*e.length)];grid[y][x]=Math.random()<0.9?2:4;}
+function render(){tilesEl.innerHTML='';grid.forEach((r,y)=>r.forEach((v,x)=>{if(!v)return;const t=document.createElement('div');t.className='tile pop';t.textContent=v;t.style.background=colors[v]||'#f59e0b';t.style.color=v<=4?'#94a3b8':'#fff';t.style.fontSize=v>=1024?'1.3rem':v>=128?'1.5rem':'1.8rem';t.style.left=`calc(${x} * (25% + 3px))`;t.style.top=`calc(${y} * (25% + 3px))`;tilesEl.appendChild(t);}));scoreEl.textContent=score;if(score>best){best=score;localStorage.setItem('arc2048best',best);bestEl.textContent=best;}}
+function slide(row){let a=row.filter(v=>v);for(let i=0;i<a.length-1;i++){if(a[i]===a[i+1]){a[i]*=2;score+=a[i];a.splice(i+1,1);}}while(a.length<SIZE)a.push(0);return a;}
+function move(dir){const before=JSON.stringify(grid);if(dir==='left'){grid=grid.map(slide);}else if(dir==='right'){grid=grid.map(r=>slide(r.reverse()).reverse());}else{grid=transpose(grid);if(dir==='up')grid=grid.map(slide);else grid=grid.map(r=>slide(r.reverse()).reverse());grid=transpose(grid);}if(JSON.stringify(grid)!==before){add();render();checkEnd();}}
+function transpose(m){return m[0].map((_,i)=>m.map(r=>r[i]));}
+function checkEnd(){if(grid.flat().includes(2048)){end('You Win! 🎉');return;}for(let y=0;y<SIZE;y++)for(let x=0;x<SIZE;x++){if(!grid[y][x])return;if(x<3&&grid[y][x]===grid[y][x+1])return;if(y<3&&grid[y][x]===grid[y+1][x])return;}end('Game Over');}
+function end(t){document.getElementById('msgText').textContent=t;document.getElementById('msg').classList.add('show');}
+addEventListener('keydown',e=>{const k={ArrowLeft:'left',ArrowRight:'right',ArrowUp:'up',ArrowDown:'down',a:'left',d:'right',w:'up',s:'down'}[e.key];if(k){e.preventDefault();move(k);}});
+let sx,sy;addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY;},{passive:true});
+addEventListener('touchend',e=>{if(sx==null)return;const dx=e.changedTouches[0].clientX-sx,dy=e.changedTouches[0].clientY-sy;if(Math.abs(dx)>Math.abs(dy)){if(Math.abs(dx)>24)move(dx>0?'right':'left');}else{if(Math.abs(dy)>24)move(dy>0?'down':'up');}sx=sy=null;},{passive:true});
+document.getElementById('newGame').onclick=init;document.getElementById('retry').onclick=init;
+init();
+</script>
+</body>
+</html>

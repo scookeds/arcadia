@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Tic-Tac-Toe — Arcadia</title>
+<style>
+  :root{--bg:#0b0f1a;--card:#131824;--grid:#1e2636;--primary:#3b82f6;--accent:#8b5cf6;--text:#f8fafc;--muted:#94a3b8}
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{background:radial-gradient(circle at 50% 0%,#131a2c,var(--bg));min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'Poppins',system-ui,sans-serif;color:var(--text);padding:16px;gap:14px;user-select:none}
+  h1{font-size:2rem;font-weight:800;letter-spacing:1px;background:linear-gradient(135deg,var(--primary),var(--accent));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .modes{display:flex;gap:8px}
+  .modes button{background:var(--card);border:1px solid var(--grid);color:var(--muted)}
+  .modes button.active{background:linear-gradient(135deg,var(--primary),var(--accent));color:#fff;border-color:transparent}
+  .status{font-weight:700;height:24px;font-size:1.05rem}
+  button{border:none;border-radius:12px;padding:9px 16px;font-weight:700;font-family:inherit;cursor:pointer;background:linear-gradient(135deg,var(--primary),var(--accent));color:#fff}
+  button:active{transform:scale(.96)}
+  #grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:min(320px,86vw)}
+  .cell{aspect-ratio:1;background:var(--card);border:1px solid var(--grid);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:3rem;font-weight:800;cursor:pointer;transition:background .15s}
+  .cell:hover{background:var(--grid)}
+  .cell.x{color:#60a5fa}.cell.o{color:#c084fc}
+  .cell.win{background:rgba(139,92,246,.25);border-color:var(--accent)}
+  .scoreboard{display:flex;gap:10px}
+  .sb{background:var(--card);border:1px solid var(--grid);border-radius:12px;padding:6px 14px;font-weight:700}
+  .sb span{color:var(--muted);font-weight:500;font-size:.75rem}
+</style>
+</head>
+<body>
+  <h1>Tic-Tac-Toe</h1>
+  <div class="modes">
+    <button id="mAI" class="active">vs Computer</button>
+    <button id="m2P">2 Players</button>
+  </div>
+  <div class="status" id="status">Your turn (X)</div>
+  <div id="grid"></div>
+  <div class="scoreboard">
+    <div class="sb">X <span id="sx">0</span></div>
+    <div class="sb">O <span id="so">0</span></div>
+    <div class="sb">Draws <span id="sd">0</span></div>
+  </div>
+  <button id="restart">New Round</button>
+<script>
+const WINS=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+const grid=document.getElementById('grid');let board,turn,over,ai=true,sc={X:0,O:0,D:0};
+function init(){board=Array(9).fill('');turn='X';over=false;grid.innerHTML='';for(let i=0;i<9;i++){const c=document.createElement('div');c.className='cell';c.onclick=()=>play(i);grid.appendChild(c);}status();}
+function status(t){document.getElementById('status').textContent=t||(ai?(turn==='X'?'Your turn (X)':'Computer thinking...'):`Player ${turn}'s turn`);}
+function render(){[...grid.children].forEach((c,i)=>{c.textContent=board[i];c.className='cell'+(board[i]?' '+board[i].toLowerCase():'');});}
+function play(i){if(over||board[i]||(ai&&turn==='O'))return;board[i]=turn;render();if(check())return;turn=turn==='X'?'O':'X';status();if(ai&&turn==='O'&&!over)setTimeout(aiMove,420);}
+function winner(b){for(const w of WINS){const[a,c,d]=w;if(b[a]&&b[a]===b[c]&&b[a]===b[d])return{p:b[a],line:w};}return b.every(v=>v)?{p:'D'}:null;}
+function check(){const r=winner(board);if(!r)return false;over=true;if(r.p==='D'){sc.D++;status("It's a draw!");}else{sc[r.p]++;r.line.forEach(i=>grid.children[i].classList.add('win'));status(`${r.p} wins!`);}document.getElementById('sx').textContent=sc.X;document.getElementById('so').textContent=sc.O;document.getElementById('sd').textContent=sc.D;return true;}
+function aiMove(){let best=-1e9,mv;for(let i=0;i<9;i++){if(!board[i]){board[i]='O';const s=mini(board,0,false);board[i]='';if(s>best){best=s;mv=i;}}}board[mv]='O';render();if(check())return;turn='X';status();}
+function mini(b,d,max){const r=winner(b);if(r){if(r.p==='O')return 10-d;if(r.p==='X')return d-10;return 0;}let best=max?-1e9:1e9;for(let i=0;i<9;i++){if(!b[i]){b[i]=max?'O':'X';const s=mini(b,d+1,!max);b[i]='';best=max?Math.max(best,s):Math.min(best,s);}}return best;}
+document.getElementById('mAI').onclick=()=>{ai=true;document.getElementById('mAI').classList.add('active');document.getElementById('m2P').classList.remove('active');init();};
+document.getElementById('m2P').onclick=()=>{ai=false;document.getElementById('m2P').classList.add('active');document.getElementById('mAI').classList.remove('active');init();};
+document.getElementById('restart').onclick=init;
+init();
+</script>
+</body>
+</html>

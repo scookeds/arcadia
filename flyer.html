@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Flux Flyer — Arcadia</title>
+<style>
+  :root{--bg:#0b0f1a;--card:#131824;--grid:#1e2636;--primary:#3b82f6;--accent:#8b5cf6;--text:#f8fafc;--muted:#94a3b8}
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{background:radial-gradient(circle at 50% 0%,#131a2c,var(--bg));min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'Poppins',system-ui,sans-serif;color:var(--text);padding:16px;gap:12px;user-select:none}
+  h1{font-size:1.9rem;font-weight:800;letter-spacing:1px;background:linear-gradient(135deg,var(--primary),var(--accent));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .hud{display:flex;gap:12px;width:min(400px,92vw);justify-content:space-between;align-items:center}
+  .score{background:var(--card);border:1px solid var(--grid);border-radius:12px;padding:8px 16px;font-weight:700}
+  .score span{color:var(--muted);font-weight:500;font-size:.8rem}
+  canvas{background:var(--card);border:1px solid var(--grid);border-radius:14px;width:min(400px,92vw);height:auto;touch-action:none;cursor:pointer}
+  .hint{color:var(--muted);font-size:.82rem}
+</style>
+</head>
+<body>
+  <h1>Flux Flyer</h1>
+  <div class="hud">
+    <div class="score">Score <span id="score">0</span></div>
+    <div class="score">Best <span id="best">0</span></div>
+  </div>
+  <canvas id="c" width="400" height="500"></canvas>
+  <div class="hint">Click / tap / space to flap</div>
+<script>
+const cv=document.getElementById('c'),ctx=cv.getContext('2d');
+let bird,pipes,score,best=+(localStorage.getItem('arcFlyerBest')||0),over,started,frame,gap=140,pw=58,speed=2.4;
+document.getElementById('best').textContent=best;
+function init(){bird={x:96,y:cv.height/2,v:0,r:13};pipes=[];score=0;over=false;started=false;frame=0;document.getElementById('score').textContent=0;draw();}
+function flap(){if(over){init();return;}started=true;bird.v=-6;}
+function spawn(){const min=60,max=cv.height-60-gap;const top=min+Math.random()*(max-min);pipes.push({x:cv.width,top,passed:false});}
+function loop(){if(!started){requestAnimationFrame(loop);return;}frame++;bird.v+=0.42;bird.y+=bird.v;if(frame%110===0)spawn();
+  pipes.forEach(p=>{p.x-=speed;if(!p.passed&&p.x+pw<bird.x){p.passed=true;score++;document.getElementById('score').textContent=score;}});
+  pipes=pipes.filter(p=>p.x+pw>0);
+  for(const p of pipes){if(bird.x+bird.r>p.x&&bird.x-bird.r<p.x+pw&&(bird.y-bird.r<p.top||bird.y+bird.r>p.top+gap))return end();}
+  if(bird.y+bird.r>cv.height||bird.y-bird.r<0)return end();
+  draw();if(!over)requestAnimationFrame(loop);}
+function draw(){ctx.clearRect(0,0,cv.width,cv.height);pipes.forEach(p=>{const g=ctx.createLinearGradient(p.x,0,p.x+pw,0);g.addColorStop(0,'#3b82f6');g.addColorStop(1,'#8b5cf6');ctx.fillStyle=g;ctx.shadowColor='#6366f1';ctx.shadowBlur=10;ctx.fillRect(p.x,0,pw,p.top);ctx.fillRect(p.x,p.top+gap,pw,cv.height-p.top-gap);});ctx.shadowBlur=0;
+  ctx.save();ctx.translate(bird.x,bird.y);ctx.rotate(Math.max(-0.5,Math.min(1,bird.v/12)));ctx.fillStyle='#f8fafc';ctx.shadowColor='#8b5cf6';ctx.shadowBlur=16;ctx.beginPath();ctx.arc(0,0,bird.r,0,7);ctx.fill();ctx.fillStyle='#3b82f6';ctx.beginPath();ctx.arc(4,-3,4,0,7);ctx.fill();ctx.restore();ctx.shadowBlur=0;
+  if(!started){ctx.fillStyle='#94a3b8';ctx.font='16px Poppins,sans-serif';ctx.textAlign='center';ctx.fillText('Tap to start',cv.width/2,cv.height/2-40);}}
+function end(){over=true;if(score>best){best=score;localStorage.setItem('arcFlyerBest',best);document.getElementById('best').textContent=best;}ctx.fillStyle='rgba(11,15,26,.82)';ctx.fillRect(0,0,cv.width,cv.height);ctx.fillStyle='#f8fafc';ctx.font='700 30px Poppins,sans-serif';ctx.textAlign='center';ctx.fillText('Game Over',cv.width/2,cv.height/2-10);ctx.font='16px Poppins,sans-serif';ctx.fillStyle='#94a3b8';ctx.fillText('Score: '+score+' · Tap to retry',cv.width/2,cv.height/2+22);}
+cv.addEventListener('click',flap);cv.addEventListener('touchstart',e=>{e.preventDefault();flap();},{passive:false});
+addEventListener('keydown',e=>{if(e.key===' '){e.preventDefault();flap();}});
+init();loop();
+</script>
+</body>
+</html>
